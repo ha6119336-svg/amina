@@ -13,7 +13,7 @@ threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
 # التوكن الذي أرسلته في رسالتك الأخيرة
 TELEGRAM_TOKEN = "8260168982:AAEy-YQDWa-yTqJKmsA_yeSuNtZb8qNeHAI"
 ADMIN_ID = 7635779264
-GROUPS = ["-1002225164483", "-1002576714713"]
+GROUPS = ["-1002225164483", "-1002576714713", "-1002704601167", "-1003191159502"]
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
 # --- روابط الصور ---

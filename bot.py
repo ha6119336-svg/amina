@@ -31,7 +31,7 @@ NIGHT_TIME = dt_time(23, 0)     # أذكار النوم (نص)
 # 2. مواعيد الذكر العام (النص الجديد)
 REMINDER_TIME_1 = dt_time(11, 0)  # 11 صباحاً
 REMINDER_TIME_2 = dt_time(17, 0)  # 5 مساءً
-REMINDER_TIME_3 = dt_time(21, 20)  # 9 ليلاً
+REMINDER_TIME_3 = dt_time(21, 0)  # 9 ليلاً
 
 # --- النصوص ---
 

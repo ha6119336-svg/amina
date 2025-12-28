@@ -10,7 +10,7 @@ def run_loop(loop): asyncio.set_event_loop(loop); loop.run_forever()
 threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
 
 # --- الإعدادات ---
-TELEGRAM_TOKEN = "8577723856:AAHoO63pIPrUil-NRZU9MI7jw9ub_50AHX0"
+TELEGRAM_TOKEN = "8260168982:AAEy-YQDWa-yTqJKmsA_yeSuNtZb8qNeHAI"
 ADMIN_ID = 7635779264
 GROUPS = ["-1002225164483", "-1002576714713"]
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
@@ -23,7 +23,7 @@ TIMEZONE = pytz.timezone("Africa/Algiers")
 
 # --- المواعيد (تم التعديل هنا) ---
 MORNING_TIME = dt_time(8, 30)
-EVENING_TIME = dt_time(17, 25)  # ✅ تم التعديل إلى 17:20
+EVENING_TIME = dt_time(17, 34)  # ✅ تم التعديل إلى 17:20
 NIGHT_TIME = dt_time(23, 0)
 
 # --- النصوص (أذكار النوم + الردود الأصلية) ---

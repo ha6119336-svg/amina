@@ -13,15 +13,17 @@ threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
 TELEGRAM_TOKEN = "8577723856:AAHoO63pIPrUil-NRZU9MI7jw9ub_50AHX0"
 ADMIN_ID = 7635779264
 GROUPS = ["-1002225164483", "-1002576714713"]
-WEBHOOK_URL = "https://hosin-q20k.onrender.com/webhook"
+WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
 # --- روابط الصور (للصباح والمساء فقط) ---
 MORNING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-22_10-05-15.jpg"
 EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-28_16-54-02.jpg"
 
 TIMEZONE = pytz.timezone("Africa/Algiers")
+
+# --- المواعيد (تم التعديل هنا) ---
 MORNING_TIME = dt_time(8, 30)
-EVENING_TIME = dt_time(16, 0)
+EVENING_TIME = dt_time(17, 20)  # ✅ تم التعديل إلى 17:20
 NIGHT_TIME = dt_time(23, 0)
 
 # --- النصوص (أذكار النوم + الردود الأصلية) ---
@@ -41,7 +43,7 @@ START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 
 ⏰ المواعيد:
 • 08:30 صباحاً
-• 16:00 مساءً
+• 17:20 مساءً
 • 23:00 ليلاً
 
 👤 حساب المطوّر:
@@ -108,7 +110,7 @@ def scheduler():
                 time.sleep(1)
             last_sent[f"m{d}"] = True
 
-        # المساء (صورة)
+        # المساء (صورة) - التوقيت الجديد 17:20
         if t.hour == EVENING_TIME.hour and t.minute == EVENING_TIME.minute and not sent(f"e{d}"):
             for g in GROUPS: 
                 send_photo(g, EVENING_IMG_URL, caption="🌇 أذكار المساء")
@@ -118,7 +120,7 @@ def scheduler():
         # النوم (نص كتابة)
         if t.hour == NIGHT_TIME.hour and t.minute == NIGHT_TIME.minute and not sent(f"n{d}"):
             for g in GROUPS: 
-                send_message(g, SLEEP_DHIKR) # هنا نرسل النص وليس الصورة
+                send_message(g, SLEEP_DHIKR)
                 time.sleep(1)
             last_sent[f"n{d}"] = True
 

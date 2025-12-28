@@ -23,7 +23,7 @@ TIMEZONE = pytz.timezone("Africa/Algiers")
 
 # --- المواعيد (تم التعديل هنا) ---
 MORNING_TIME = dt_time(8, 30)
-EVENING_TIME = dt_time(17, 20)  # ✅ تم التعديل إلى 17:20
+EVENING_TIME = dt_time(17, 25)  # ✅ تم التعديل إلى 17:20
 NIGHT_TIME = dt_time(23, 0)
 
 # --- النصوص (أذكار النوم + الردود الأصلية) ---

@@ -10,23 +10,46 @@ def run_loop(loop): asyncio.set_event_loop(loop); loop.run_forever()
 threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
 
 # --- الإعدادات ---
+# التوكن الذي أرسلته في رسالتك الأخيرة
 TELEGRAM_TOKEN = "8260168982:AAEy-YQDWa-yTqJKmsA_yeSuNtZb8qNeHAI"
 ADMIN_ID = 7635779264
 GROUPS = ["-1002225164483", "-1002576714713"]
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
-# --- روابط الصور (للصباح والمساء فقط) ---
+# --- روابط الصور ---
 MORNING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-22_10-05-15.jpg"
 EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-28_16-54-02.jpg"
 
 TIMEZONE = pytz.timezone("Africa/Algiers")
 
-# --- المواعيد (تم التعديل هنا) ---
-MORNING_TIME = dt_time(8, 30)
-EVENING_TIME = dt_time(17, 34)  # ✅ تم التعديل إلى 17:20
-NIGHT_TIME = dt_time(23, 0)
+# --- المواعيد ---
+# 1. المواعيد الأساسية
+MORNING_TIME = dt_time(8, 30)   # أذكار الصباح (صورة)
+EVENING_TIME = dt_time(16, 0)   # أذكار المساء (صورة) - تم التعديل للرابعة
+NIGHT_TIME = dt_time(23, 0)     # أذكار النوم (نص)
 
-# --- النصوص (أذكار النوم + الردود الأصلية) ---
+# 2. مواعيد الذكر العام (النص الجديد)
+REMINDER_TIME_1 = dt_time(11, 0)  # 11 صباحاً
+REMINDER_TIME_2 = dt_time(17, 0)  # 5 مساءً
+REMINDER_TIME_3 = dt_time(21, 0)  # 9 ليلاً
+
+# --- النصوص ---
+
+# الذكر الجديد (وذكر ربك إذا نسيت)
+GENERAL_DHIKR = """‏﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾ 🌿
+
+‏- سُبحان الله
+‏- الحمدلله
+-‏ الله أكبر
+‏- أستغفر الله
+‏- لا إله إلا الله
+‏- لاحول ولا قوة إلا بالله
+‏- سُبحان الله وبحمده
+‏- سُبحان الله العظيم
+- اللَّهُمَّ صلِّ وسلِم على نبينا محمد
+‏- لا إله إلا أنت سُبحانك إني كنت من الظالمين."""
+
+# أذكار النوم
 SLEEP_DHIKR = """🌙 نام وأنت مغفور الذنب
 
 قال رسول الله ﷺ:
@@ -35,16 +58,17 @@ SLEEP_DHIKR = """🌙 نام وأنت مغفور الذنب
 
 غفر الله ذنوبه أو خطاياه وإن كانت مثل زبد البحر." 🤎🌗"""
 
+# رسالة البداية (تم تحديث المواعيد فيها)
 START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 
-🌅 يرسل أذكار الصباح
-🌇 يرسل أذكار المساء
-🌙 يرسل أذكار النوم
+يُرسل الأذكار والتذكيرات يومياً بتوقيت الجزائر:
 
-⏰ المواعيد:
-• 08:30 صباحاً
-• 17:20 مساءً
-• 23:00 ليلاً
+🌅 08:30 | أذكار الصباح (صورة)
+📿 11:00 | تذكير بالله (نص)
+🌇 16:00 | أذكار المساء (صورة)
+📿 17:00 | تذكير بالله (نص)
+📿 21:00 | تذكير بالله (نص)
+🌙 23:00 | أذكار النوم (نص)
 
 👤 حساب المطوّر:
 @Mik_emm
@@ -71,7 +95,7 @@ def get_bot():
     if not bot: bot = Bot(token=TELEGRAM_TOKEN)
     return bot
 
-# دالة لإرسال النصوص (تستخدم للنوم وللأوامر)
+# دالة لإرسال النصوص
 def send_message(chat_id, text):
     async def task():
         try:
@@ -84,7 +108,7 @@ def send_message(chat_id, text):
             
     asyncio.run_coroutine_threadsafe(task(), event_loop)
 
-# دالة لإرسال الصور (تستخدم للصباح والمساء)
+# دالة لإرسال الصور
 def send_photo(chat_id, photo_url, caption=None):
     async def task():
         try:
@@ -103,21 +127,42 @@ def scheduler():
         t, d = now.time(), now.date()
         def sent(k): return k in last_sent
 
-        # الصباح (صورة)
+        # 1. أذكار الصباح (صورة) - 08:30
         if t.hour == MORNING_TIME.hour and t.minute == MORNING_TIME.minute and not sent(f"m{d}"):
             for g in GROUPS: 
                 send_photo(g, MORNING_IMG_URL, caption="🌅 أذكار الصباح")
                 time.sleep(1)
             last_sent[f"m{d}"] = True
 
-        # المساء (صورة) - التوقيت الجديد 17:20
+        # 2. التذكير الأول (نص) - 11:00
+        if t.hour == REMINDER_TIME_1.hour and t.minute == REMINDER_TIME_1.minute and not sent(f"r1{d}"):
+            for g in GROUPS: 
+                send_message(g, GENERAL_DHIKR)
+                time.sleep(1)
+            last_sent[f"r1{d}"] = True
+
+        # 3. أذكار المساء (صورة) - 16:00
         if t.hour == EVENING_TIME.hour and t.minute == EVENING_TIME.minute and not sent(f"e{d}"):
             for g in GROUPS: 
                 send_photo(g, EVENING_IMG_URL, caption="🌇 أذكار المساء")
                 time.sleep(1)
             last_sent[f"e{d}"] = True
 
-        # النوم (نص كتابة)
+        # 4. التذكير الثاني (نص) - 17:00
+        if t.hour == REMINDER_TIME_2.hour and t.minute == REMINDER_TIME_2.minute and not sent(f"r2{d}"):
+            for g in GROUPS: 
+                send_message(g, GENERAL_DHIKR)
+                time.sleep(1)
+            last_sent[f"r2{d}"] = True
+
+        # 5. التذكير الثالث (نص) - 21:00
+        if t.hour == REMINDER_TIME_3.hour and t.minute == REMINDER_TIME_3.minute and not sent(f"r3{d}"):
+            for g in GROUPS: 
+                send_message(g, GENERAL_DHIKR)
+                time.sleep(1)
+            last_sent[f"r3{d}"] = True
+
+        # 6. أذكار النوم (نص) - 23:00
         if t.hour == NIGHT_TIME.hour and t.minute == NIGHT_TIME.minute and not sent(f"n{d}"):
             for g in GROUPS: 
                 send_message(g, SLEEP_DHIKR)

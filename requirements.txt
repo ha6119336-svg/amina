@@ -1,5 +1,6 @@
-flask
+Flask
 python-telegram-bot
-pytz
 requests
-gunicorn
+pytz
+pymongo
+dnspython

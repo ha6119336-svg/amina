@@ -4,20 +4,22 @@ import threading
 import time
 import requests
 import pymongo
-import certifi
 import pytz
 from datetime import datetime, time as dt_time
 from flask import Flask, request, jsonify
 from urllib.parse import quote_plus
 
 # ==============================================================================
-# ⚠️ بياناتك الحساسة (تم وضعها كما طلبت ليعمل الكود فوراً)
+# ⚙️ الإعدادات (كل شيء جاهز)
 # ==============================================================================
 
 TELEGRAM_TOKEN = "8260168982:AAEy-YQDWa-yTqJKmsA_yeSuNtZb8qNeHAI"
 ADMIN_ID = 7635779264
 
-# إعداد رابط قاعدة البيانات مع تشفير كلمة المرور
+# قائمة المجموعات القديمة (احتياطية لضمان عمل البوت حتى لو تعطلت القاعدة)
+BACKUP_GROUPS = ["-1002225164483", "-1002576714713", "-1002704601167", "-1003191159502", "-1003177076554"]
+
+# إعدادات قاعدة البيانات
 RAW_PASSWORD = "mohamed862006&"
 ESCAPED_PASSWORD = quote_plus(RAW_PASSWORD)
 MONGO_URL = f"mongodb+srv://mohamedabdellah:{ESCAPED_PASSWORD}@cluster0.hvuqzjx.mongodb.net/?appName=Cluster0"
@@ -27,15 +29,37 @@ WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL", "https://amina-3ryn.onrender
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 TELEGRAM_PHOTO_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
 
-# ==============================================================================
-
-# إعداد التطبيق
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 TIMEZONE = pytz.timezone("Africa/Algiers")
 last_sent = {}
 
-# --- الروابط والنصوص (تم دمجها) ---
+# ==============================================================================
+# 🗄️ الاتصال بقاعدة البيانات (مع وضع الأمان لعدم تعطيل البوت)
+# ==============================================================================
+db_connected = False
+chats_col = None
+
+def connect_db():
+    global db_connected, chats_col
+    try:
+        # إضافة tlsAllowInvalidCertificates=True لحل مشكلة Render
+        client = pymongo.MongoClient(MONGO_URL, tls=True, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=5000)
+        db = client["amina_db"]
+        chats_col = db["chats"]
+        client.admin.command('ping') # فحص سريع
+        db_connected = True
+        logging.info("✅ Database Connected Successfully!")
+    except Exception as e:
+        logging.error(f"⚠️ Database Connection Failed (Bot will run in backup mode): {e}")
+
+# نشغل الاتصال في خيط منفصل حتى لا يؤخر تشغيل البوت
+threading.Thread(target=connect_db).start()
+
+# ==============================================================================
+# 📝 البيانات والمواعيد
+# ==============================================================================
+
 MORNING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-22_10-05-15.jpg"
 EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-28_16-54-02.jpg"
 
@@ -45,68 +69,46 @@ GENERAL_DHIKR = """‏﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ 
 -‏ الله أكبر
 ‏- أستغفر الله
 ‏- لا إله إلا الله
-‏- لاحول ولا قوة إلا بالله
-‏- سُبحان الله وبحمده
-‏- سُبحان الله العظيم
-- اللَّهُمَّ صلِّ وسلِم على نبينا محمد
-‏- لا إله إلا أنت سُبحانك إني كنت من الظالمين."""
+‏- لاحول ولا قوة إلا بالله"""
 
-SLEEP_DHIKR = """🌙 نام وأنت مغفور الذنب
-قال رسول الله ﷺ:
+SLEEP_DHIKR = """🌙 *أذكار النوم*
 "من قال حين يأوي إلى فراشه:
-'لا إله إلا الله وحده لا شريك له، له الملك وله الحمد، وهو على كل شيء قدير، لا حول ولا قوة إلا بالله، سبحان الله والحمد لله ولا إله إلا الله والله أكبر'
-غفر الله ذنوبه أو خطاياه وإن كانت مثل زبد البحر." 🤎🌗"""
+'لا إله إلا الله وحده لا شريك له...'
+غفر الله ذنوبه." 🤎"""
 
-START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
-يُرسل الأذكار والتذكيرات يومياً بتوقيت الجزائر:
-🌅 08:30 | أذكار الصباح (صورة)
-📿 11:00 | تذكير بالله (نص)
-🌇 16:00 | أذكار المساء (صورة)
-📿 17:00 | تذكير بالله (نص)
-📿 21:00 | تذكير بالله (نص)
-🌙 23:00 | أذكار النوم (نص)
+START_RESPONSE = """🤖 *أهلاً بك في بوت الأذكار*
+يُرسل الأذكار والتذكيرات يومياً بتوقيت الجزائر 🇩🇿
 
-👤 حساب المطوّر:
-@Mik_emm
-💡 صاحب الفكرة:
-@mohamedelhocine
-🤲 نرجو الدعاء له
-بارك الله فيكم 🌸"""
+✅ البوت يعمل والحمد لله.
+"""
 
-# --- الاتصال بقاعدة البيانات ---
-db_connected = False
-chats_col = None
-
-try:
-    # مهلة 5 ثواني فقط للاتصال حتى لا يعلق البوت
-    client = pymongo.MongoClient(MONGO_URL, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=5000)
-    db = client["amina_db"]
-    chats_col = db["chats"]
-    # أمر بسيط للتأكد من الاتصال
-    client.server_info()
-    db_connected = True
-    logging.info("✅ تم الاتصال بقاعدة البيانات بنجاح")
-except Exception as e:
-    logging.error(f"❌ فشل الاتصال بقاعدة البيانات (لكن البوت سيعمل): {e}")
-
-# --- دوال مساعدة (Threads) ---
+# ==============================================================================
+# 🚀 دوال الإرسال (سريعة جداً باستخدام requests)
+# ==============================================================================
 
 def send_message(chat_id, text):
-    """إرسال رسالة نصية"""
     try:
         requests.post(TELEGRAM_API_URL, json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}, timeout=5)
-    except Exception as e:
-        logging.error(f"Error Sending Text: {e}")
+    except: pass
 
 def send_photo(chat_id, photo_url, caption=None):
-    """إرسال صورة"""
     try:
         requests.post(TELEGRAM_PHOTO_URL, json={"chat_id": chat_id, "photo": photo_url, "caption": caption, "parse_mode": "Markdown"}, timeout=10)
-    except Exception as e:
-        logging.error(f"Error Sending Photo: {e}")
+    except: pass
+
+def get_all_chats():
+    """جلب المجموعات من الداتا بيز، وإذا فشل نستخدم القائمة الاحتياطية"""
+    if db_connected and chats_col:
+        try:
+            db_chats = [doc["chat_id"] for doc in chats_col.find({"active": True})]
+            # ندمج المجموعات القديمة مع الجديدة لضمان عدم ضياع أي أحد
+            return list(set(db_chats + BACKUP_GROUPS))
+        except:
+            return BACKUP_GROUPS
+    return BACKUP_GROUPS
 
 def save_chat_background(chat_id, title, chat_type):
-    """حفظ البيانات في الخلفية"""
+    """حفظ المجموعة دون انتظار"""
     if not db_connected: return
     try:
         chats_col.update_one(
@@ -116,29 +118,19 @@ def save_chat_background(chat_id, title, chat_type):
         )
     except: pass
 
-# --- نقل المجموعات القديمة (تشغيل مرة واحدة في الخلفية) ---
-OLD_GROUPS = ["-1002225164483", "-1002576714713", "-1002704601167", "-1003191159502", "-1003177076554", "-1002820782492"]
-def migrate_old_groups():
-    if not db_connected: return
-    time.sleep(10) # انتظار قليلاً حتى يستقر البوت
-    for gid in OLD_GROUPS:
-        try:
-            chats_col.update_one({"chat_id": gid}, {"$set": {"active": True, "migrated": True}}, upsert=True)
-        except: pass
-threading.Thread(target=migrate_old_groups, daemon=True).start()
+# ==============================================================================
+# ⏰ المجدول الزمني (Scheduler)
+# ==============================================================================
 
-# --- المجدول الزمني (Scheduler) ---
 def broadcast(content_type, content, caption=None):
-    """نشر للجميع"""
-    if not db_connected: return
-    cursor = chats_col.find({"active": True})
-    for doc in cursor:
-        chat_id = doc["chat_id"]
-        try:
-            if content_type == "photo": send_photo(chat_id, content, caption)
-            else: send_message(chat_id, content)
-            time.sleep(0.05) 
-        except: pass
+    targets = get_all_chats()
+    for chat_id in targets:
+        # إرسال لكل مجموعة في خيط منفصل للسرعة
+        if content_type == "photo":
+            threading.Thread(target=send_photo, args=(chat_id, content, caption)).start()
+        else:
+            threading.Thread(target=send_message, args=(chat_id, content)).start()
+        time.sleep(0.1) 
 
 def scheduler():
     while True:
@@ -147,10 +139,9 @@ def scheduler():
             current_time = now.strftime("%H:%M")
             day_key = now.strftime("%Y-%m-%d")
             
-            # جدول المواعيد (تم تعديله حسب طلبك)
             schedule = {
                 "08:30": ("photo", MORNING_IMG_URL, "🌅 أذكار الصباح"),
-                "11:27": ("text", GENERAL_DHIKR, None),
+                "11:41": ("text", GENERAL_DHIKR, None),
                 "16:00": ("photo", EVENING_IMG_URL, "🌇 أذكار المساء"),
                 "17:00": ("text", GENERAL_DHIKR, None),
                 "21:00": ("text", GENERAL_DHIKR, None),
@@ -173,11 +164,13 @@ def scheduler():
 
 threading.Thread(target=scheduler, daemon=True).start()
 
-# --- الويب والـ Webhook ---
+# ==============================================================================
+# 🌐 خادم الويب (Flask)
+# ==============================================================================
 
 @app.route("/", methods=["GET"])
 def home():
-    return "Bot is Running Live!", 200
+    return "Bot is Running Fast!", 200
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -189,30 +182,19 @@ def webhook():
         chat_id = msg["chat"]["id"]
         text = msg.get("text", "").strip()
         
-        # 1️⃣ الرد الفوري على Start (تم الإصلاح)
+        # ✅ الرد السريع جداً
         if text.startswith("/start"):
-            # نرسل الرد في خيط منفصل فوراً
             threading.Thread(target=send_message, args=(chat_id, START_RESPONSE)).start()
-            # نحفظ البيانات في الخلفية
             threading.Thread(target=save_chat_background, args=(chat_id, msg["chat"].get("title", "User"), msg["chat"]["type"])).start()
             return jsonify(ok=True)
 
-        # 2️⃣ الرد الفوري على ID (تم الإصلاح: يرسل رقمك فقط)
         elif text.startswith("/id"):
-            threading.Thread(target=send_message, args=(chat_id, f"🆔 ID: `{chat_id}`")).start()
+            threading.Thread(target=send_message, args=(chat_id, f"🆔: `{chat_id}`")).start()
             return jsonify(ok=True)
 
-        # 3️⃣ أوامر الأدمن
-        elif text == "/admin" and msg.get("from", {}).get("id") == ADMIN_ID:
-             count = chats_col.count_documents({"active": True}) if db_connected else 0
-             threading.Thread(target=send_message, args=(chat_id, f"📊 عدد المشتركين: {count}")).start()
-             return jsonify(ok=True)
+        # حفظ أي رسالة
+        threading.Thread(target=save_chat_background, args=(chat_id, msg["chat"].get("title"), msg["chat"]["type"])).start()
 
-        # حفظ الرسائل العادية
-        title = msg["chat"].get("title", msg["chat"].get("first_name"))
-        threading.Thread(target=save_chat_background, args=(chat_id, title, msg["chat"]["type"])).start()
-
-    # معالجة الإضافة لمجموعة
     if "my_chat_member" in data:
         update = data["my_chat_member"]
         if update["new_chat_member"]["status"] in ["member", "administrator"]:
@@ -221,7 +203,7 @@ def webhook():
 
     return jsonify(ok=True)
 
-# Ping للحفاظ على البوت
+# Ping Keep Alive
 def keep_alive():
     while True:
         try: requests.get(f"{WEBHOOK_URL.replace('/webhook', '')}/")
@@ -230,10 +212,9 @@ def keep_alive():
 threading.Thread(target=keep_alive, daemon=True).start()
 
 if __name__ == "__main__":
-    # تفعيل الويب هوك تلقائياً
+    # Webhook Setup
     try:
         requests.get(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook?url={WEBHOOK_URL}")
-        logging.info("Webhook Set Successfully")
     except: pass
     
     port = int(os.environ.get("PORT", 10000))

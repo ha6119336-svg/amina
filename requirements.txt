@@ -5,3 +5,4 @@ pytz
 pymongo
 dnspython
 certifi
+python-dotenv

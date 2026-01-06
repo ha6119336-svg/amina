@@ -10,7 +10,7 @@ def run_loop(loop): asyncio.set_event_loop(loop); loop.run_forever()
 threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
 
 # --- الإعدادات ---
-TELEGRAM_TOKEN = "8260168982:AAEy-YQDWa-yTqJKmsA_yeSuNtZb8qNeHAI"
+TELEGRAM_TOKEN = "8525171965:AAFbAunEMsi8SLKDOSRZhzhe_SUNCrF-bOs"
 ADMIN_ID = 7635779264
 
 # ✅ قائمة المجموعات (كما طلبتها)

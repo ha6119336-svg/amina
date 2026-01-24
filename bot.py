@@ -8,27 +8,32 @@ from datetime import datetime, time as dt_time
 import pytz
 from flask import Flask, request, jsonify
 from telegram import Bot, error
-from dotenv import load_dotenv # ✅ مكتبة جديدة
+from dotenv import load_dotenv
 
-# تحميل المتغيرات من ملف .env (للعمل على جهازك المحلي)
+# تحميل المتغيرات من ملف .env
 load_dotenv()
 
 # إعداد الـ Loop
 event_loop = asyncio.new_event_loop()
-def run_loop(loop): asyncio.set_event_loop(loop); loop.run_forever()
+def run_loop(loop): 
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
 threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
 
-# --- الإعدادات (تم إخفاء التوكن) ---
-# ✅ الآن الكود يبحث عن التوكن في إعدادات السيرفر أو ملف .env
+# --- الإعدادات ---
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-if not TELEGRAM_TOKEN:
-    print("⚠️ Error: TELEGRAM_TOKEN is missing!")
-
-# يفضل أيضاً إخفاء معرف الأدمن، لكن لا بأس بتركه
 ADMIN_ID = 7635779264 
 
-# ✅ قائمة المجموعات
-GROUPS = ["-1002225164483", "-1003052347212", "-1003323851379", "-1002900824077", "-1002266393691", "-1003370258674", "-1003044484309","-1002196247994", "-1003153665259", "-1001978444680", "-1002945924752", "-1002830014765", "-1002277708600", "-1002576714713", "-1003372233969", "-1002704601167", "-1003191159502", "-1003177076554", "-1002820782492", "-1002489850528","-1003649220499", "-1003031738078", "-1003205832373", "-1003186786281", "-1003189260339"]
+# ✅ قائمة المجموعات والقنوات (تم الإبقاء على كافة الآيديات السابقة)
+GROUPS = [
+    "-1002225164483", "-1003052347212", "-1003323851379", "-1002900824077", 
+    "-1002266393691", "-1003370258674", "-1003044484309", "-1002196247994", 
+    "-1003153665259", "-1001978444680", "-1002945924752", "-1002830014765", 
+    "-1002277708600", "-1002576714713", "-1003372233969", "-1002704601167", 
+    "-1003191159502", "-1003177076554", "-1002820782492", "-1002489850528",
+    "-1003649220499", "-1003031738078", "-1003205832373", "-1003186786281", 
+    "-1003189260339"
+]
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
@@ -71,21 +76,24 @@ SLEEP_DHIKR = """🌙 نام وأنت مغفور الذنب
 
 START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 
-يُرسل الأذكار والتذكيرات يومياً بتوقيت الجزائر:
+يُرسل الأذكار والتذكيرات يومياً   (للمجموعات والقنوات):
 
 🌅 08:30 | أذكار الصباح  
 📿 11:00 | تذكير بالله  
 🌇 16:00 | أذكار المساء  
 📿 17:00 | تذكير بالله  
-📿 21:00 | تذكير بالله   
+📿 21:00 | تذكير بالله  
 🌙 23:00 | أذكار النوم  
-
 👤 حساب المطوّر:
+
 @Mik_emm
 
 💡 صاحب الفكرة:
+
 @mohamedelhocine
+
 🤲 نرجو الدعاء له
+
 واي شخص عنده افكار او اضافات للبوت يتصل بي وشكرا 
 بارك الله فيكم 🌸
 """
@@ -108,13 +116,12 @@ def get_bot():
 def send_message(chat_id, text):
     async def task():
         try:
-            await get_bot().send_message(chat_id, text)
+            await get_bot().send_message(chat_id, text, parse_mode="Markdown")
         except error.RetryAfter as e:
-            time.sleep(int(e.retry_after) + 1)
-            await get_bot().send_message(chat_id, text)
+            await asyncio.sleep(e.retry_after)
+            await get_bot().send_message(chat_id, text, parse_mode="Markdown")
         except Exception as e:
-            logging.error(f"Error sending message: {e}")
-            
+            logging.error(f"Error sending message to {chat_id}: {e}")
     asyncio.run_coroutine_threadsafe(task(), event_loop)
 
 def send_photo(chat_id, photo_url, caption=None):
@@ -122,11 +129,10 @@ def send_photo(chat_id, photo_url, caption=None):
         try:
             await get_bot().send_photo(chat_id=chat_id, photo=photo_url, caption=caption)
         except error.RetryAfter as e:
-            time.sleep(int(e.retry_after) + 1)
+            await asyncio.sleep(e.retry_after)
             await get_bot().send_photo(chat_id=chat_id, photo=photo_url, caption=caption)
         except Exception as e:
             logging.error(f"Error sending photo to {chat_id}: {e}")
-
     asyncio.run_coroutine_threadsafe(task(), event_loop)
 
 def scheduler():
@@ -135,43 +141,32 @@ def scheduler():
         t, d = now.time(), now.date()
         def sent(k): return k in last_sent
 
+        # العمليات المجدولة لكل المعرفات في GROUPS (سواء كانت مجموعات أو قنوات)
         if t.hour == MORNING_TIME.hour and t.minute == MORNING_TIME.minute and not sent(f"m{d}"):
-            for g in GROUPS: 
-                send_photo(g, MORNING_IMG_URL, caption="🌅 أذكار الصباح")
-                time.sleep(1)
+            for g in GROUPS: send_photo(g, MORNING_IMG_URL, caption="🌅 أذكار الصباح")
             last_sent[f"m{d}"] = True
 
         if t.hour == REMINDER_TIME_1.hour and t.minute == REMINDER_TIME_1.minute and not sent(f"r1{d}"):
-            for g in GROUPS: 
-                send_message(g, GENERAL_DHIKR)
-                time.sleep(1)
+            for g in GROUPS: send_message(g, GENERAL_DHIKR)
             last_sent[f"r1{d}"] = True
 
         if t.hour == EVENING_TIME.hour and t.minute == EVENING_TIME.minute and not sent(f"e{d}"):
-            for g in GROUPS: 
-                send_photo(g, EVENING_IMG_URL, caption="🌇 أذكار المساء")
-                time.sleep(1)
+            for g in GROUPS: send_photo(g, EVENING_IMG_URL, caption="🌇 أذكار المساء")
             last_sent[f"e{d}"] = True
 
         if t.hour == REMINDER_TIME_2.hour and t.minute == REMINDER_TIME_2.minute and not sent(f"r2{d}"):
-            for g in GROUPS: 
-                send_message(g, GENERAL_DHIKR)
-                time.sleep(1)
+            for g in GROUPS: send_message(g, GENERAL_DHIKR)
             last_sent[f"r2{d}"] = True
 
         if t.hour == REMINDER_TIME_3.hour and t.minute == REMINDER_TIME_3.minute and not sent(f"r3{d}"):
-            for g in GROUPS: 
-                send_message(g, GENERAL_DHIKR)
-                time.sleep(1)
+            for g in GROUPS: send_message(g, GENERAL_DHIKR)
             last_sent[f"r3{d}"] = True
 
         if t.hour == NIGHT_TIME.hour and t.minute == NIGHT_TIME.minute and not sent(f"n{d}"):
-            for g in GROUPS: 
-                send_message(g, SLEEP_DHIKR)
-                time.sleep(1)
+            for g in GROUPS: send_message(g, SLEEP_DHIKR)
             last_sent[f"n{d}"] = True
 
-        time.sleep(60)
+        time.sleep(30)
 
 threading.Thread(target=scheduler, daemon=True).start()
 
@@ -191,17 +186,19 @@ def webhook():
     data = request.get_json()
     if not data: return jsonify(ok=True)
 
-    if "my_chat_member" in data:
-        update = data["my_chat_member"]
-        new_status = update.get("new_chat_member", {}).get("status")
-        
+    # ✅ تحديث: كشف الانضمام للقنوات والمجموعات معاً
+    target_update = data.get("my_chat_member") or data.get("chat_member")
+    if target_update:
+        new_status = target_update.get("new_chat_member", {}).get("status")
         if new_status in ["member", "administrator"]:
-            chat = update["chat"]
+            chat = target_update["chat"]
             title = chat.get("title", "No Title")
             cid = chat["id"]
-            msg_to_admin = f"🔔 **تم دخول مجموعة جديدة!**\n\n🏷 الاسم: {title}\n🆔 الآيدي: `{cid}`"
+            ctype = chat.get("type", "unknown")
+            msg_to_admin = f"🔔 **تم دخول {ctype} جديدة!**\n\n🏷 الاسم: {title}\n🆔 الآيدي: `{cid}`"
             send_message(ADMIN_ID, msg_to_admin)
 
+    # معالجة الرسائل العادية
     if "message" in data:
         msg = data["message"]
         chat_id = msg["chat"]["id"]
@@ -212,19 +209,16 @@ def webhook():
 
         if chat_type == "private" or user_id == ADMIN_ID:
             if command == "/start": send_message(chat_id, START_RESPONSE)
-            if command == "/help": send_message(chat_id, HELP_RESPONSE)
-            if command == "/status":
-                send_message(chat_id, f"✅ البوت يعمل\n⏰ {datetime.now(TIMEZONE)}")
+            elif command == "/help": send_message(chat_id, HELP_RESPONSE)
+            elif command == "/status":
+                send_message(chat_id, f"✅ البوت يعمل\n⏰ {datetime.now(TIMEZONE).strftime('%H:%M:%S')}")
 
     return jsonify(ok=True)
 
 if __name__ == "__main__":
     async def hook(): 
-        try:
-            await get_bot().set_webhook(WEBHOOK_URL)
-        except Exception as e:
-            logging.error(f"Webhook Error: {e}")
-            
+        try: await get_bot().set_webhook(WEBHOOK_URL)
+        except Exception as e: logging.error(f"Webhook Error: {e}")
     asyncio.run_coroutine_threadsafe(hook(), event_loop)
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)

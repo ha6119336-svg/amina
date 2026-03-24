@@ -8,37 +8,37 @@ from datetime import datetime, time as dt_time
 import pytz
 from flask import Flask, request, jsonify
 from telegram import Bot, error
-from dotenv import load_dotenv # ✅ مكتبة جديدة
+from dotenv import load_dotenv 
 
-# تحميل المتغيرات من ملف .env (للعمل على جهازك المحلي)
+
 load_dotenv()
 
-# إعداد الـ Loop
+
 event_loop = asyncio.new_event_loop()
 def run_loop(loop): asyncio.set_event_loop(loop); loop.run_forever()
 threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
 
-# --- الإعدادات (تم إخفاء التوكن) ---
-# ✅ الآن الكود يبحث عن التوكن في إعدادات السيرفر أو ملف .env
+
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
     print("⚠️ Error: TELEGRAM_TOKEN is missing!")
 
-# يفضل أيضاً إخفاء معرف الأدمن، لكن لا بأس بتركه
+
 ADMIN_ID = 7635779264 
 
-# ✅ قائمة المجموعات
+
 GROUPS = ["-1002225164483", "-1003784451676", "-1002176070309", "-1003180809085", "-1003311119289", "-1003697993023", "-1003052347212", "-1003844593524", "-1002858641545", "-1002282439285", "-1003116442943", "-1002931305845", "-1003312231265", "-1003894583067", "-1003843458817", "-1002035944708", "-1003271832818", "-1003719826542", "-1002853793956", "-1003658097048", "-1003322259283", "-1003826569019", "-1003599878671", "-1002553441661", "-1003341681144",  "-1003052347212", "-1003579089415", "-1003323851379", "-1002900824077", "-1002266393691", "-1003370258674", "-1003044484309","-1002196247994", "-1003153665259", "-1001978444680", "-1002945924752", "-1002830014765", "-1002277708600", "-1002576714713", "-1003372233969", "-1002704601167", "-1003191159502", "-1003177076554", "-1002820782492", "-1002489850528","-1003649220499", "-1003031738078", "-1003205832373", "-1003186786281", "-1003189260339"]
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
-# --- روابط الصور ---
+
 MORNING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-22_10-05-15.jpg"
 EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-28_16-54-02.jpg"
 
 TIMEZONE = pytz.timezone("Africa/Algiers")
 
-# --- المواعيد ---
+
 MORNING_TIME = dt_time(8, 30)
 EVENING_TIME = dt_time(16, 0)
 NIGHT_TIME = dt_time(23, 0)
@@ -46,7 +46,7 @@ REMINDER_TIME_1 = dt_time(11, 0)
 REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
-# --- النصوص ---
+
 GENERAL_DHIKR = """ 🌿 **﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾**
 
   سُبحان الله
@@ -80,7 +80,7 @@ START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 📿 21:00 | تذكير بالله   
 🌙 23:00 | أذكار النوم  
 
-👤 حساب المطوّر:
+👤 حسابي  :
 @Mik_emm
 
 💡 صاحب الفكرة:

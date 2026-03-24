@@ -23,7 +23,7 @@ if not TELEGRAM_TOKEN:
 
 ADMIN_ID = 7635779264 
 
-GROUPS = [ "-1002576714713"]
+GROUPS = [" -1002576714713"]
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
@@ -40,7 +40,7 @@ REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
 # وقت التفسير
-QURAN_TIME = dt_time(16, 49)
+QURAN_TIME = dt_time(16,59)
 
 GENERAL_DHIKR = """ 🌿 ﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾
 
@@ -173,43 +173,39 @@ def get_surah_info(surah_num):
 def get_full_surah_text_and_tafsir(surah_num):
     """
     جلب نص السورة كاملة مع التفسير الميسر لكل آية
-    ويعيد قاموساً يحتوي على {رقم_الآية: {text: نص_الآية, tafsir: التفسير}}
+    يعتمد على الترتيب (Index) لضمان مطابقة التفسير مع الآية الصحيحة
     """
     try:
-        # جلب نص السورة
+        # 1. جلب نص السورة
         response = requests.get(f"https://api.alquran.cloud/v1/surah/{surah_num}", timeout=10)
         response.raise_for_status()
-        data = response.json()["data"]
+        surah_data = response.json()["data"]
         
-        # جلب التفسير الميسر
-        tafsir_response = requests.get(f"https://quranenc.com/api/v1/translation/sura/arabic_moyassar/{surah_num}", timeout=15)
+        # 2. جلب التفسير الميسر
+        tafsir_url = f"https://quranenc.com/api/v1/translation/sura/arabic_moyassar/{surah_num}"
+        tafsir_response = requests.get(tafsir_url, timeout=15)
         
         verses = {}
         
-        # تخزين نصوص الآيات
-        for ayah in data["ayahs"]:
-            verse_num = ayah["numberInSurah"]
-            verses[verse_num] = {
-                "text": ayah["text"],
-                "tafsir": ""
-            }
-        
-        # إضافة التفسير
+        # إنشاء هيكل الآيات أولاً
+        for ayah in surah_data["ayahs"]:
+            num = ayah["numberInSurah"]
+            verses[num] = {"text": ayah["text"], "tafsir": ""}
+
+        # 3. دمج التفسير بدقة - نعتمد على الترتيب (Index) لضمان المطابقة
         if tafsir_response.status_code == 200:
-            tafsir_data = tafsir_response.json()
-            result = tafsir_data.get("result", [])
-            
-            for item in result:
-                ayah_num = item.get("ayah")
+            t_data = tafsir_response.json().get("result", [])
+            for index, item in enumerate(t_data):
+                actual_num = index + 1  # رقم الآية داخل السورة (يبدأ من 1)
                 explanation = item.get("translation", "").strip()
                 
-                if ayah_num and ayah_num in verses:
-                    verses[ayah_num]["tafsir"] = explanation
-        
-        return verses, data["name"], data["numberOfAyahs"]
+                if actual_num in verses:
+                    verses[actual_num]["tafsir"] = explanation
+
+        return verses, surah_data["name"], surah_data["numberOfAyahs"]
         
     except Exception as e:
-        logging.error(f"خطأ في جلب البيانات: {e}")
+        logging.error(f"Error in fetching Quran data: {e}")
         return None, None, None
 
 def send_quran_to_all_groups():
@@ -264,15 +260,16 @@ def send_quran_to_all_groups():
             ayah_text = verses[i]["text"]
             ayah_tafsir = verses[i]["tafsir"]
             
+            # التنسيق: الآية ثم التفسير
+            tafsir_text += f"﴿ {ayah_text} ﴾\n"
+            
             if ayah_tafsir:
-                # التنسيق المطلوب: الآية ثم التفسير
-                tafsir_text += f"{ayah_text}\n"
-                tafsir_text += f"<b>• الآية {i}:</b>\n"
-                tafsir_text += f"{ayah_tafsir}\n\n"
+                tafsir_text += f"<b>• تفسير الآية {i}:</b>\n"
+                tafsir_text += f"{ayah_tafsir}\n"
             else:
-                tafsir_text += f"{ayah_text}\n"
-                tafsir_text += f"<b>• الآية {i}:</b>\n"
-                tafsir_text += "لم يتوفر تفسير لهذه الآية\n\n"
+                tafsir_text += f"<b>• الآية {i}:</b> [يُرجى مراجعة التفسير مباشرة]\n"
+            
+            tafsir_text += "───\n\n"
     
     # ========== إرسال الرسائل لجميع المجموعات ==========
     for g in GROUPS:

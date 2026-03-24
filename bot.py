@@ -40,7 +40,7 @@ REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
 # وقت التفسير
-QURAN_TIME = dt_time(17,04)
+QURAN_TIME = dt_time(17,10)
 
 GENERAL_DHIKR = """ 🌿 ﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾
 

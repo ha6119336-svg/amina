@@ -23,7 +23,7 @@ if not TELEGRAM_TOKEN:
 
 ADMIN_ID = 7635779264 
 
-GROUPS = ["-1002576714713"]
+GROUPS = [ "-1002576714713"]
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
@@ -40,7 +40,7 @@ REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
 # وقت التفسير
-QURAN_TIME = dt_time(16, 38)
+QURAN_TIME = dt_time(16, 49)
 
 GENERAL_DHIKR = """ 🌿 ﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾
 
@@ -170,69 +170,50 @@ def get_surah_info(surah_num):
         logging.error(f"خطأ في جلب معلومات السورة: {e}")
         return None
 
-def get_full_surah_text(surah_num):
-    """جلب نص السورة كاملة"""
+def get_full_surah_text_and_tafsir(surah_num):
+    """
+    جلب نص السورة كاملة مع التفسير الميسر لكل آية
+    ويعيد قاموساً يحتوي على {رقم_الآية: {text: نص_الآية, tafsir: التفسير}}
+    """
     try:
+        # جلب نص السورة
         response = requests.get(f"https://api.alquran.cloud/v1/surah/{surah_num}", timeout=10)
         response.raise_for_status()
         data = response.json()["data"]
-        text = ""
-        for ayah in data["ayahs"]:
-            text += f"{ayah['text']}\n\n"
-        return text.strip()
-    except Exception as e:
-        logging.error(f"خطأ في جلب نص السورة: {e}")
-        return None
-
-def get_tafsir_automatic(surah_num):
-    """
-    جلب التفسير الميسر من مصدر موثوق (quranenc.com)
-    مع تنسيق محسن: • الآية (رقم) متبوعاً بالشرح
-    """
-    try:
-        # استخدام API التفسير الميسر (وزارة الشؤون الإسلامية)
-        url = f"https://quranenc.com/api/v1/translation/sura/arabic_moyassar/{surah_num}"
-        response = requests.get(url, timeout=15)
         
-        if response.status_code == 200:
-            data = response.json()
-            result = data.get("result", [])
-            
-            if not result:
-                logging.warning(f"لا يوجد تفسير للسورة {surah_num}")
-                return None
-
-            # جلب اسم السورة
-            surah_info = get_surah_info(surah_num)
-            surah_name_text = surah_info["name"] if surah_info else str(surah_num)
-            
-            tafsir_text = f"📚 <b>تفسير سورة {surah_name_text}</b>\n"
-            tafsir_text += "<b>التفسير الميسر</b>\n"
-            tafsir_text += "━" * 30 + "\n\n"
+        # جلب التفسير الميسر
+        tafsir_response = requests.get(f"https://quranenc.com/api/v1/translation/sura/arabic_moyassar/{surah_num}", timeout=15)
+        
+        verses = {}
+        
+        # تخزين نصوص الآيات
+        for ayah in data["ayahs"]:
+            verse_num = ayah["numberInSurah"]
+            verses[verse_num] = {
+                "text": ayah["text"],
+                "tafsir": ""
+            }
+        
+        # إضافة التفسير
+        if tafsir_response.status_code == 200:
+            tafsir_data = tafsir_response.json()
+            result = tafsir_data.get("result", [])
             
             for item in result:
                 ayah_num = item.get("ayah")
                 explanation = item.get("translation", "").strip()
                 
-                if explanation:
-                    # تنسيق جديد بعلامة مميزة (•) قبل رقم الآية
-                    tafsir_text += f"<b>• الآية {ayah_num}:</b>\n"
-                    tafsir_text += f"{explanation}\n\n"
-            
-            # التحقق من وجود محتوى فعلي
-            if len(tafsir_text) > 200:
-                return tafsir_text
-            else:
-                logging.warning(f"تفسير سورة {surah_num} قصير جداً")
-                return None
-            
+                if ayah_num and ayah_num in verses:
+                    verses[ayah_num]["tafsir"] = explanation
+        
+        return verses, data["name"], data["numberOfAyahs"]
+        
     except Exception as e:
-        logging.error(f"Error fetching tafsir for surah {surah_num}: {e}")
-    
-    return None
+        logging.error(f"خطأ في جلب البيانات: {e}")
+        return None, None, None
 
-def send_quran_to_group(chat_id):
-    """إرسال السورة والتفسير لمجموعة - رسالتين فقط"""
+def send_quran_to_all_groups():
+    """إرسال السورة كاملة لجميع المجموعات في وقت واحد"""
     global current_surah_index
     
     if current_surah_index >= len(SURAH_ORDER):
@@ -240,53 +221,78 @@ def send_quran_to_group(chat_id):
         logging.info("🔄 تم الانتهاء من جميع السور، نبدأ من جديد")
     
     surah_num = SURAH_ORDER[current_surah_index]
-    surah_info = get_surah_info(surah_num)
+    verses, surah_name, total_ayahs = get_full_surah_text_and_tafsir(surah_num)
     
-    if not surah_info:
-        send_message(chat_id, f"❌ خطأ في جلب سورة {surah_num}")
+    if not verses:
+        for g in GROUPS:
+            send_message(g, f"❌ خطأ في جلب سورة {surah_num}")
         return
     
-    logging.info(f"📖 جاري إرسال سورة {surah_info['name']}...")
+    # جلب معلومات السورة
+    surah_info = get_surah_info(surah_num)
+    revelation_type = surah_info["revelation_type"] if surah_info else "مكية"
     
-    # ========== الرسالة الأولى: معلومات + نص السورة ==========
-    header = f"""🌟 <b>سورة {surah_info['name']}</b>
+    logging.info(f"📖 جاري إرسال سورة {surah_name} إلى {len(GROUPS)} مجموعة...")
+    
+    # ========== بناء الرسالة الأولى: معلومات + نص السورة ==========
+    header = f"""🌟 <b>سورة {surah_name}</b>
 ━━━━━━━━━━━━━━━━━━━━━
-📊 رقم السورة: {surah_info['order']}
-📖 عدد الآيات: {surah_info['total_ayahs']}
-📍 نوع السورة: {surah_info['revelation_type']}
+📊 رقم السورة: {surah_num}
+📖 عدد الآيات: {total_ayahs}
+📍 نوع السورة: {revelation_type}
 ━━━━━━━━━━━━━━━━━━━━━
 
 <b>نص السورة:</b>\n\n"""
     
-    surah_text = get_full_surah_text(surah_num)
+    # بناء نص السورة
+    surah_text = ""
+    for i in range(1, total_ayahs + 1):
+        if i in verses:
+            surah_text += f"{verses[i]['text']}\n\n"
     
-    if surah_text:
-        message1 = header + surah_text
-        send_long_message(chat_id, message1)
-        time.sleep(2)
-    else:
-        send_message(chat_id, header + "❌ لم يتوفر نص السورة")
-        return
+    surah_message = header + surah_text
     
-    # ========== الرسالة الثانية: التفسير المحسن ==========
-    tafsir = get_tafsir_automatic(surah_num)
+    # ========== بناء الرسالة الثانية: التفسير بالشكل المطلوب ==========
+    tafsir_header = f"📚 <b>تفسير سورة {surah_name}</b>\n"
+    tafsir_header += "<b>التفسير الميسر</b>\n"
+    tafsir_header += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
     
-    if tafsir:
-        send_long_message(chat_id, tafsir)
-        logging.info(f"✅ تم إرسال تفسير سورة {surah_info['name']}")
-    else:
-        send_message(chat_id, f"📚 <b>تفسير سورة {surah_info['name']}</b>\n━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ لم يتوفر التفسير حالياً. سيتم إضافته لاحقاً إن شاء الله.")
+    tafsir_text = tafsir_header
+    
+    for i in range(1, total_ayahs + 1):
+        if i in verses:
+            ayah_text = verses[i]["text"]
+            ayah_tafsir = verses[i]["tafsir"]
+            
+            if ayah_tafsir:
+                # التنسيق المطلوب: الآية ثم التفسير
+                tafsir_text += f"{ayah_text}\n"
+                tafsir_text += f"<b>• الآية {i}:</b>\n"
+                tafsir_text += f"{ayah_tafsir}\n\n"
+            else:
+                tafsir_text += f"{ayah_text}\n"
+                tafsir_text += f"<b>• الآية {i}:</b>\n"
+                tafsir_text += "لم يتوفر تفسير لهذه الآية\n\n"
+    
+    # ========== إرسال الرسائل لجميع المجموعات ==========
+    for g in GROUPS:
+        try:
+            # الرسالة الأولى: نص السورة
+            send_long_message(g, surah_message)
+            time.sleep(2)
+            
+            # الرسالة الثانية: التفسير
+            send_long_message(g, tafsir_text)
+            time.sleep(1)
+            
+            logging.info(f"✅ تم إرسال سورة {surah_name} إلى المجموعة {g}")
+        except Exception as e:
+            logging.error(f"خطأ في إرسال سورة {surah_name} إلى {g}: {e}")
     
     # تحديث المؤشر للسورة القادمة
     current_surah_index += 1
     remaining = len(SURAH_ORDER) - current_surah_index
     logging.info(f"📊 السور المتبقية: {remaining}")
-
-def send_quran_to_all_groups():
-    """إرسال التفسير لجميع المجموعات"""
-    for g in GROUPS:
-        send_quran_to_group(g)
-        time.sleep(3)
 
 # ========== الـ Scheduler ==========
 

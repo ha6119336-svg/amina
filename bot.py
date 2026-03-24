@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ========== إعدادات البوت الأساسية ==========
+ 
 event_loop = asyncio.new_event_loop()
 def run_loop(loop): asyncio.set_event_loop(loop); loop.run_forever()
 threading.Thread(target=run_loop, args=(event_loop,), daemon=True).start()
@@ -23,7 +23,7 @@ if not TELEGRAM_TOKEN:
 
 ADMIN_ID = 7635779264 
 
-GROUPS = ["-1002576714713"]
+GROUPS = ["-1002225164483", "-1003784451676", "-1002176070309", "-1003180809085", "-1003311119289", "-1003697993023", "-1003052347212", "-1003844593524", "-1002858641545", "-1002282439285", "-1003116442943", "-1002931305845", "-1003312231265", "-1003894583067", "-1003843458817", "-1002035944708", "-1003271832818", "-1003719826542", "-1002853793956", "-1003658097048", "-1003322259283", "-1003826569019", "-1003599878671", "-1002553441661", "-1003341681144",  "-1003052347212", "-1003579089415", "-1003323851379", "-1002900824077", "-1002266393691", "-1003370258674", "-1003044484309","-1002196247994", "-1003153665259", "-1001978444680", "-1002945924752", "-1002830014765", "-1002277708600", "-1002576714713", "-1003372233969", "-1002704601167", "-1003191159502", "-1003177076554", "-1002820782492", "-1002489850528","-1003649220499", "-1003031738078", "-1003205832373", "-1003186786281", "-1003189260339"]
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
@@ -39,8 +39,8 @@ REMINDER_TIME_1 = dt_time(11, 0)
 REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
-# وقت التفسير
-QURAN_TIME = dt_time(17,10)
+    
+QURAN_TIME = dt_time(23,00)
 
 GENERAL_DHIKR = """ 🌿 ﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾
 
@@ -74,7 +74,7 @@ START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 📿 17:00 | تذكير بالله  
 📿 21:00 | تذكير بالله   
 🌙 23:00 | أذكار النوم  
-📖 14:43 | تفسير القرآن
+📖 23:00 | تفسير القرآن
 
 👤 حسابي  :
 @Mik_emm
@@ -96,7 +96,7 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 bot, last_sent = None, {}
 
-# ========== متغيرات التفسير ==========
+ 
 SURAH_ORDER = list(range(114, 92, -1))  # من الناس (114) إلى الضحى (93)
 current_surah_index = 0
 
@@ -151,7 +151,7 @@ def send_long_message(chat_id, text):
             send_message(chat_id, f"<b>تابع...</b>\n\n{part}")
         time.sleep(1)
 
-# ========== دوال التفسير المحسنة ==========
+ 
 
 def get_surah_info(surah_num):
     """جلب معلومات السورة"""
@@ -176,23 +176,23 @@ def get_full_surah_text_and_tafsir(surah_num):
     يعتمد على الترتيب (Index) لضمان مطابقة التفسير مع الآية الصحيحة
     """
     try:
-        # 1. جلب نص السورة
+           
         response = requests.get(f"https://api.alquran.cloud/v1/surah/{surah_num}", timeout=10)
         response.raise_for_status()
         surah_data = response.json()["data"]
         
-        # 2. جلب التفسير الميسر
+              
         tafsir_url = f"https://quranenc.com/api/v1/translation/sura/arabic_moyassar/{surah_num}"
         tafsir_response = requests.get(tafsir_url, timeout=15)
         
         verses = {}
         
-        # إنشاء هيكل الآيات أولاً
+            
         for ayah in surah_data["ayahs"]:
             num = ayah["numberInSurah"]
             verses[num] = {"text": ayah["text"], "tafsir": ""}
 
-        # 3. دمج التفسير بدقة - نعتمد على الترتيب (Index) لضمان المطابقة
+           
         if tafsir_response.status_code == 200:
             t_data = tafsir_response.json().get("result", [])
             for index, item in enumerate(t_data):
@@ -224,13 +224,13 @@ def send_quran_to_all_groups():
             send_message(g, f"❌ خطأ في جلب سورة {surah_num}")
         return
     
-    # جلب معلومات السورة
+        
     surah_info = get_surah_info(surah_num)
     revelation_type = surah_info["revelation_type"] if surah_info else "مكية"
     
     logging.info(f"📖 جاري إرسال سورة {surah_name} إلى {len(GROUPS)} مجموعة...")
     
-    # ========== بناء الرسالة الأولى: معلومات + نص السورة ==========
+    
     header = f"""🌟 <b>سورة {surah_name}</b>
 ━━━━━━━━━━━━━━━━━━━━━
 📊 رقم السورة: {surah_num}
@@ -248,7 +248,7 @@ def send_quran_to_all_groups():
     
     surah_message = header + surah_text
     
-    # ========== بناء الرسالة الثانية: التفسير بالشكل المطلوب ==========
+   
     tafsir_header = f"📚 <b>تفسير سورة {surah_name}</b>\n"
     tafsir_header += "<b>التفسير الميسر</b>\n"
     tafsir_header += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
@@ -260,7 +260,7 @@ def send_quran_to_all_groups():
             ayah_text = verses[i]["text"]
             ayah_tafsir = verses[i]["tafsir"]
             
-            # التنسيق: الآية ثم التفسير
+               
             tafsir_text += f"﴿ {ayah_text} ﴾\n"
             
             if ayah_tafsir:
@@ -271,14 +271,14 @@ def send_quran_to_all_groups():
             
             tafsir_text += "───\n\n"
     
-    # ========== إرسال الرسائل لجميع المجموعات ==========
+     
     for g in GROUPS:
         try:
-            # الرسالة الأولى: نص السورة
+             
             send_long_message(g, surah_message)
             time.sleep(2)
             
-            # الرسالة الثانية: التفسير
+            
             send_long_message(g, tafsir_text)
             time.sleep(1)
             
@@ -286,12 +286,12 @@ def send_quran_to_all_groups():
         except Exception as e:
             logging.error(f"خطأ في إرسال سورة {surah_name} إلى {g}: {e}")
     
-    # تحديث المؤشر للسورة القادمة
+        
     current_surah_index += 1
     remaining = len(SURAH_ORDER) - current_surah_index
     logging.info(f"📊 السور المتبقية: {remaining}")
 
-# ========== الـ Scheduler ==========
+ 
 
 def scheduler():
     while True:
@@ -335,7 +335,7 @@ def scheduler():
                 time.sleep(1)
             last_sent[f"n{d}"] = True
 
-        # وقت التفسير
+            
         if t.hour == QURAN_TIME.hour and t.minute == QURAN_TIME.minute and not sent(f"q{d}"):
             send_quran_to_all_groups()
             last_sent[f"q{d}"] = True

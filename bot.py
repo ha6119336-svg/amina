@@ -46,8 +46,11 @@ REMINDER_TIME_1 = dt_time(11, 0)
 REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
+# ========== إضافة وقت التفسير الجديد ==========
+QURAN_TIME = dt_time(15, 35)  # غير هذا إلى الوقت الذي تريده
 
-GENERAL_DHIKR = """ 🌿 **﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾**
+
+GENERAL_DHIKR = """ 🌿 ﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾
 
   سُبحان الله
   الحمدلله
@@ -79,6 +82,7 @@ START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 📿 17:00 | تذكير بالله  
 📿 21:00 | تذكير بالله   
 🌙 23:00 | أذكار النوم  
+📖 14:43 | تفسير القرآن
 
 👤 حسابي  :
 @Mik_emm
@@ -99,6 +103,10 @@ HELP_RESPONSE = """📌 الأوامر المتاحة:
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 bot, last_sent = None, {}
+
+# ========== إضافة متغيرات التفسير ==========
+SURAH_ORDER = list(range(114, 92, -1))  # من الناس (114) إلى الضحى (93)
+current_surah_index = 0
 
 def get_bot():
     global bot
@@ -128,6 +136,135 @@ def send_photo(chat_id, photo_url, caption=None):
             logging.error(f"Error sending photo to {chat_id}: {e}")
 
     asyncio.run_coroutine_threadsafe(task(), event_loop)
+
+# ========== دوال التفسير الجديدة ==========
+
+def get_surah_info(surah_num):
+    """جلب معلومات السورة"""
+    try:
+        response = requests.get(f"https://api.alquran.cloud/v1/surah/{surah_num}", timeout=10)
+        response.raise_for_status()
+        data = response.json()["data"]
+        revelation_type = "مكية" if data["revelationType"] == "Meccan" else "مدنية"
+        return {
+            "name": data["name"],
+            "total_ayahs": data["numberOfAyahs"],
+            "revelation_type": revelation_type,
+            "order": data["number"]
+        }
+    except Exception as e:
+        logging.error(f"خطأ في جلب معلومات السورة: {e}")
+        return None
+
+def get_full_surah_text(surah_num):
+    """جلب نص السورة كاملة"""
+    try:
+        response = requests.get(f"https://api.alquran.cloud/v1/surah/{surah_num}", timeout=10)
+        response.raise_for_status()
+        data = response.json()["data"]
+        text = ""
+        for ayah in data["ayahs"]:
+            text += f"{ayah['text']}\n\n"
+        return text.strip()
+    except Exception as e:
+        logging.error(f"خطأ في جلب نص السورة: {e}")
+        return None
+
+def get_surah_tafsir(surah_num):
+    """جلب تفسير السورة من تفسير السعدي"""
+    try:
+        response = requests.get(
+            f"https://api.alquran.cloud/v1/surah/{surah_num}/ar.saadi",
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()["data"]
+        
+        tafsir_text = f"📚 <b>تفسير سورة {data['name']}</b>\n"
+        tafsir_text += "<b>تيسير الكريم الرحمن (السعدي)</b>\n"
+        tafsir_text += "━" * 30 + "\n\n"
+        
+        for ayah in data["ayahs"]:
+            if ayah["text"].strip() and ayah["text"] != "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ":
+                tafsir_text += f"<b>الآية {ayah['numberInSurah']}:</b>\n"
+                tafsir_text += f"{ayah['text']}\n\n"
+        
+        return tafsir_text
+        
+    except Exception as e:
+        logging.error(f"خطأ في جلب التفسير: {e}")
+        return None
+
+def send_quran_message(chat_id, text):
+    """إرسال رسالة التفسير مع دعم النصوص الطويلة"""
+    async def task():
+        try:
+            if len(text) > 4096:
+                parts = [text[i:i+4000] for i in range(0, len(text), 4000)]
+                for i, part in enumerate(parts):
+                    if i == 0:
+                        await get_bot().send_message(chat_id=chat_id, text=part, parse_mode='HTML')
+                    else:
+                        await get_bot().send_message(chat_id=chat_id, text=f"<b>تابع...</b>\n\n{part}", parse_mode='HTML')
+                    time.sleep(1)
+            else:
+                await get_bot().send_message(chat_id=chat_id, text=text, parse_mode='HTML')
+        except error.RetryAfter as e:
+            time.sleep(int(e.retry_after) + 1)
+            await get_bot().send_message(chat_id=chat_id, text=text, parse_mode='HTML')
+        except Exception as e:
+            logging.error(f"Error sending quran message to {chat_id}: {e}")
+    
+    asyncio.run_coroutine_threadsafe(task(), event_loop)
+
+def send_quran_to_group(chat_id):
+    """إرسال التفسير لمجموعة"""
+    global current_surah_index
+    
+    if current_surah_index >= len(SURAH_ORDER):
+        current_surah_index = 0
+    
+    surah_num = SURAH_ORDER[current_surah_index]
+    surah_info = get_surah_info(surah_num)
+    
+    if not surah_info:
+        send_message(chat_id, f"❌ خطأ في جلب سورة {surah_num}")
+        return
+    
+    # الرسالة الأولى: معلومات + نص السورة
+    header = f"""🌟 <b>سورة {surah_info['name']}</b>
+━━━━━━━━━━━━━━━━━━━━━
+📊 رقم السورة: {surah_info['order']}
+📖 عدد الآيات: {surah_info['total_ayahs']}
+📍 نوع السورة: {surah_info['revelation_type']}
+━━━━━━━━━━━━━━━━━━━━━
+
+<b>نص السورة:</b>\n\n"""
+    
+    surah_text = get_full_surah_text(surah_num)
+    
+    if surah_text:
+        message1 = header + surah_text
+        send_quran_message(chat_id, message1)
+        time.sleep(2)
+    
+    # الرسالة الثانية: التفسير
+    tafsir = get_surah_tafsir(surah_num)
+    
+    if tafsir:
+        send_quran_message(chat_id, tafsir)
+    
+    # تحديث المؤشر للسورة القادمة
+    current_surah_index += 1
+    logging.info(f"تم إرسال سورة {surah_info['name']} إلى {chat_id}")
+
+def send_quran_to_all_groups():
+    """إرسال التفسير لجميع المجموعات"""
+    for g in GROUPS:
+        send_quran_to_group(g)
+        time.sleep(3)  # تأخير بين المجموعات
+
+# ========== تعديل الـ scheduler لإضافة وقت التفسير ==========
 
 def scheduler():
     while True:
@@ -171,6 +308,11 @@ def scheduler():
                 time.sleep(1)
             last_sent[f"n{d}"] = True
 
+        # ========== إضافة وقت التفسير الجديد ==========
+        if t.hour == QURAN_TIME.hour and t.minute == QURAN_TIME.minute and not sent(f"q{d}"):
+            send_quran_to_all_groups()
+            last_sent[f"q{d}"] = True
+
         time.sleep(60)
 
 threading.Thread(target=scheduler, daemon=True).start()
@@ -199,7 +341,7 @@ def webhook():
             chat = update["chat"]
             title = chat.get("title", "No Title")
             cid = chat["id"]
-            msg_to_admin = f"🔔 **تم دخول مجموعة جديدة!**\n\n🏷 الاسم: {title}\n🆔 الآيدي: `{cid}`"
+            msg_to_admin = f"🔔 تم دخول مجموعة جديدة!\n\n🏷 الاسم: {title}\n🆔 الآيدي: {cid}"
             send_message(ADMIN_ID, msg_to_admin)
 
     if "message" in data:

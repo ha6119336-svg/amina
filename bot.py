@@ -23,7 +23,7 @@ if not TELEGRAM_TOKEN:
 
 ADMIN_ID = 7635779264 
 
-GROUPS = [" -1002576714713"]
+GROUPS = ["-1002576714713"]
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
@@ -40,7 +40,7 @@ REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
 # وقت التفسير
-QURAN_TIME = dt_time(16,59)
+QURAN_TIME = dt_time(17,04)
 
 GENERAL_DHIKR = """ 🌿 ﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾
 

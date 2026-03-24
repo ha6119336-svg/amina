@@ -23,7 +23,7 @@ if not TELEGRAM_TOKEN:
 
 ADMIN_ID = 7635779264 
 
-GROUPS = [ "-1002576714713"]
+GROUPS = ["-1002576714713"]
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
@@ -39,8 +39,8 @@ REMINDER_TIME_1 = dt_time(11, 0)
 REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
-# وقت التفسير - غير حسب رغبتك
-QURAN_TIME = dt_time(15, 48)
+# وقت التفسير
+QURAN_TIME = dt_time(16, 15)
 
 GENERAL_DHIKR = """ 🌿 ﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾
 
@@ -97,17 +97,8 @@ logging.basicConfig(level=logging.INFO)
 bot, last_sent = None, {}
 
 # ========== متغيرات التفسير ==========
-# سور من الناس (114) إلى الضحى (93)
-SURAH_ORDER = list(range(114, 92, -1))
+SURAH_ORDER = list(range(114, 92, -1))  # من الناس (114) إلى الضحى (93)
 current_surah_index = 0
-
-# استخدام تفسير ابن كثير (ar-tafsir-ibn-kathir) - تفسير موسع وشامل [citation:2]
-# يمكن تغييره إلى أي تفسير آخر حسب الرغبة
-TAFSIR_SLUG = "ar-tafsir-ibn-kathir"  # تفسير ابن كثير
-# بدائل أخرى: ar-tafsir-al-tabari (الطبري), ar-tafseer-al-qurtubi (القرطبي), ar-tafsir-muyassar (الميسر), ar-tafsir-al-saddi (السعدي)
-
-# قاعدة URL لتفسير API [citation:2]
-TAFSIR_BASE_URL = "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir"
 
 def get_bot():
     global bot
@@ -117,10 +108,10 @@ def get_bot():
 def send_message(chat_id, text):
     async def task():
         try:
-            await get_bot().send_message(chat_id, text)
+            await get_bot().send_message(chat_id, text, parse_mode='HTML')
         except error.RetryAfter as e:
             time.sleep(int(e.retry_after) + 1)
-            await get_bot().send_message(chat_id, text)
+            await get_bot().send_message(chat_id, text, parse_mode='HTML')
         except Exception as e:
             logging.error(f"Error sending message: {e}")
     asyncio.run_coroutine_threadsafe(task(), event_loop)
@@ -137,12 +128,11 @@ def send_photo(chat_id, photo_url, caption=None):
     asyncio.run_coroutine_threadsafe(task(), event_loop)
 
 def send_long_message(chat_id, text):
-    """إرسال رسائل طويلة مقسمة تلقائياً"""
+    """إرسال رسائل طويلة مقسمة"""
     if len(text) <= 4096:
         send_message(chat_id, text)
         return
     
-    # تقسيم النص الطويل
     parts = []
     current_part = ""
     for line in text.split('\n'):
@@ -161,10 +151,10 @@ def send_long_message(chat_id, text):
             send_message(chat_id, f"<b>تابع...</b>\n\n{part}")
         time.sleep(1)
 
-# ========== دوال التفسير التلقائي ==========
+# ========== دوال التفسير المحسنة ==========
 
 def get_surah_info(surah_num):
-    """جلب معلومات السورة من API"""
+    """جلب معلومات السورة"""
     try:
         response = requests.get(f"https://api.alquran.cloud/v1/surah/{surah_num}", timeout=10)
         response.raise_for_status()
@@ -196,92 +186,53 @@ def get_full_surah_text(surah_num):
 
 def get_tafsir_automatic(surah_num):
     """
-    جلب التفسير التلقائي من API الموثوق
-    يستخدم تفسير ابن كثير (موسع وشامل) [citation:2]
+    جلب التفسير الميسر من مصدر موثوق (quranenc.com)
+    هذا المصدر يقدم التفسير الصحيح لكل آية، وليس نص الآية
     """
     try:
-        # استخدام Tafsir API الذي يعمل بدون مشاكل [citation:2]
-        url = f"{TAFSIR_BASE_URL}/{TAFSIR_SLUG}/{surah_num}.json"
+        # استخدام API التفسير الميسر (وزارة الشؤون الإسلامية)
+        url = f"https://quranenc.com/api/v1/translation/sura/arabic_moyassar/{surah_num}"
         response = requests.get(url, timeout=15)
         
         if response.status_code == 200:
             data = response.json()
-            surah_data = data.get(str(surah_num), data)
+            result = data.get("result", [])
             
-            # استخراج اسم السورة
-            surah_name = surah_data.get("name", f"السورة {surah_num}")
+            if not result:
+                logging.warning(f"لا يوجد تفسير للسورة {surah_num}")
+                return None
+
+            # جلب اسم السورة
+            surah_name = get_surah_info(surah_num)
+            surah_name_text = surah_name["name"] if surah_name else str(surah_num)
             
-            # بناء نص التفسير
-            tafsir_text = f"📚 <b>تفسير سورة {surah_name}</b>\n"
+            tafsir_text = f"📚 <b>تفسير سورة {surah_name_text}</b>\n"
+            tafsir_text += "<b>التفسير الميسر</b>\n"
+            tafsir_text += "━" * 25 + "\n\n"
             
-            # تحديد اسم التفسير حسب المستخدم
-            tafsir_names = {
-                "ar-tafsir-ibn-kathir": "تفسير ابن كثير",
-                "ar-tafsir-al-tabari": "تفسير الطبري",
-                "ar-tafseer-al-qurtubi": "تفسير القرطبي",
-                "ar-tafsir-muyassar": "تفسير الميسر",
-                "ar-tafsir-al-saddi": "تفسير السعدي"
-            }
-            tafsir_text += f"<b>{tafsir_names.get(TAFSIR_SLUG, 'تفسير ابن كثير')}</b>\n"
-            tafsir_text += "━" * 30 + "\n\n"
-            
-            # جمع الآيات مع تفسيرها
-            verses = surah_data.get("verses", [])
-            for verse in verses:
-                verse_num = verse.get("verse", verse.get("number", 0))
-                verse_text = verse.get("text", verse.get("tafsir", ""))
+            for item in result:
+                ayah_num = item.get("ayah")
+                # النص هنا هو التفسير الحقيقي وليس الآية
+                explanation = item.get("translation", "").strip()
                 
-                if verse_text and verse_text.strip():
-                    tafsir_text += f"<b>الآية {verse_num}:</b>\n"
-                    tafsir_text += f"{verse_text.strip()}\n\n"
+                if explanation:
+                    tafsir_text += f"<b>الآية {ayah_num}:</b>\n"
+                    tafsir_text += f"{explanation}\n\n"
             
             # التحقق من وجود محتوى فعلي
             if len(tafsir_text) > 200:
                 return tafsir_text
             else:
-                logging.warning(f"تفسير سورة {surah_num} قصير جداً، قد يكون غير مكتمل")
-                
+                logging.warning(f"تفسير سورة {surah_num} قصير جداً")
+                return None
+            
     except Exception as e:
-        logging.error(f"خطأ في جلب تفسير ابن كثير للسورة {surah_num}: {e}")
+        logging.error(f"Error fetching tafsir for surah {surah_num}: {e}")
     
-    # محاولة استخدام تفسير الميسر كبديل (أخف وأسرع)
-    try:
-        url = f"{TAFSIR_BASE_URL}/ar-tafsir-muyassar/{surah_num}.json"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            surah_data = data.get(str(surah_num), data)
-            surah_name = surah_data.get("name", f"السورة {surah_num}")
-            
-            tafsir_text = f"📚 <b>تفسير سورة {surah_name}</b>\n"
-            tafsir_text += "<b>تفسير الميسر</b>\n"
-            tafsir_text += "━" * 30 + "\n\n"
-            
-            verses = surah_data.get("verses", [])
-            for verse in verses:
-                verse_num = verse.get("verse", verse.get("number", 0))
-                verse_text = verse.get("text", verse.get("tafsir", ""))
-                if verse_text and verse_text.strip():
-                    tafsir_text += f"<b>الآية {verse_num}:</b>\n"
-                    tafsir_text += f"{verse_text.strip()}\n\n"
-            
-            if len(tafsir_text) > 200:
-                return tafsir_text
-    except Exception as e:
-        logging.error(f"خطأ في جلب تفسير الميسر: {e}")
-    
-    # إذا فشل كل شيء
-    return f"""📚 <b>تفسير سورة {surah_num}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️ لم يتوفر التفسير حالياً من API.
-سيتم المحاولة مرة أخرى غداً إن شاء الله.
-
-💡 يمكنك قراءة التفسير على:
-https://quran.com/{surah_num}/tafsirs/ar-tafsir-ibn-kathir"""
+    return None
 
 def send_quran_to_group(chat_id):
-    """إرسال التفسير لمجموعة - رسالتين فقط"""
+    """إرسال السورة والتفسير لمجموعة - رسالتين فقط"""
     global current_surah_index
     
     if current_surah_index >= len(SURAH_ORDER):
@@ -317,14 +268,15 @@ def send_quran_to_group(chat_id):
         send_message(chat_id, header + "❌ لم يتوفر نص السورة")
         return
     
-    # ========== الرسالة الثانية: التفسير التلقائي الموسع ==========
+    # ========== الرسالة الثانية: التفسير الصحيح ==========
     tafsir = get_tafsir_automatic(surah_num)
     
     if tafsir:
         send_long_message(chat_id, tafsir)
         logging.info(f"✅ تم إرسال تفسير سورة {surah_info['name']}")
     else:
-        send_message(chat_id, f"❌ لم يتوفر تفسير لسورة {surah_info['name']}")
+        # إذا فشل التفسير، نرسل رسالة توضيحية بدون روابط
+        send_message(chat_id, f"📚 <b>تفسير سورة {surah_info['name']}</b>\n━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ لم يتوفر التفسير حالياً. سيتم إضافته لاحقاً إن شاء الله.")
     
     # تحديث المؤشر للسورة القادمة
     current_surah_index += 1
@@ -381,7 +333,7 @@ def scheduler():
                 time.sleep(1)
             last_sent[f"n{d}"] = True
 
-        # وقت التفسير الجديد
+        # وقت التفسير
         if t.hour == QURAN_TIME.hour and t.minute == QURAN_TIME.minute and not sent(f"q{d}"):
             send_quran_to_all_groups()
             last_sent[f"q{d}"] = True

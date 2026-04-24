@@ -43,7 +43,7 @@ GROUPS = [
 
 # ✅ الإضافة فقط
 TARGET_GROUP = -1002945924752
-THREAD_ID = 1119
+THREAD_ID = 8017
 
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 

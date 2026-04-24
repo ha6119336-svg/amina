@@ -41,6 +41,10 @@ GROUPS = [
     "-1003780145453", "-1002535678527", "-1002941551082", "-1003116951477", "-1002348968170"
 ]
 
+# ✅ الإضافة فقط
+TARGET_GROUP = -1002945924752
+THREAD_ID = 1119
+
 WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 
 
@@ -119,7 +123,10 @@ def get_bot():
 def send_message(chat_id, text):
     async def task():
         try:
-            await get_bot().send_message(chat_id, text)
+            if int(chat_id) == TARGET_GROUP:
+                await get_bot().send_message(chat_id, text, message_thread_id=THREAD_ID)
+            else:
+                await get_bot().send_message(chat_id, text)
         except error.RetryAfter as e:
             time.sleep(int(e.retry_after) + 1)
             await get_bot().send_message(chat_id, text)
@@ -131,7 +138,10 @@ def send_message(chat_id, text):
 def send_photo(chat_id, photo_url, caption=None):
     async def task():
         try:
-            await get_bot().send_photo(chat_id=chat_id, photo=photo_url, caption=caption)
+            if int(chat_id) == TARGET_GROUP:
+                await get_bot().send_photo(chat_id=chat_id, photo=photo_url, caption=caption, message_thread_id=THREAD_ID)
+            else:
+                await get_bot().send_photo(chat_id=chat_id, photo=photo_url, caption=caption)
         except error.RetryAfter as e:
             time.sleep(int(e.retry_after) + 1)
             await get_bot().send_photo(chat_id=chat_id, photo=photo_url, caption=caption)
@@ -239,3 +249,4 @@ if __name__ == "__main__":
     asyncio.run_coroutine_threadsafe(hook(), event_loop)
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+ 

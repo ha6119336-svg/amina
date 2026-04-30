@@ -51,6 +51,12 @@ WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 MORNING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-22_10-05-15.jpg"
 EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-28_16-54-02.jpg"
 
+ 
+JUMUAH_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/images.jpeg"
+KAHF_PDF_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/kahf.pdf"
+JUMUAH_TIME = dt_time(9, 0)
+ 
+
 TIMEZONE = pytz.timezone("Africa/Algiers")
 
 
@@ -150,6 +156,32 @@ def send_photo(chat_id, photo_url, caption=None):
 
     asyncio.run_coroutine_threadsafe(task(), event_loop)
 
+ 
+def send_document(chat_id, file_url, caption=None):
+    async def task():
+        try:
+            if int(chat_id) == TARGET_GROUP:
+                await get_bot().send_document(
+                    chat_id=chat_id,
+                    document=file_url,
+                    caption=caption,
+                    message_thread_id=THREAD_ID
+                )
+            else:
+                await get_bot().send_document(
+                    chat_id=chat_id,
+                    document=file_url,
+                    caption=caption
+                )
+        except error.RetryAfter as e:
+            time.sleep(int(e.retry_after) + 1)
+            await get_bot().send_document(chat_id=chat_id, document=file_url, caption=caption)
+        except Exception as e:
+            logging.error(f"Error sending document: {e}")
+
+    asyncio.run_coroutine_threadsafe(task(), event_loop)
+ 
+
 def scheduler():
     while True:
         now = datetime.now(TIMEZONE)
@@ -191,6 +223,17 @@ def scheduler():
                 send_message(g, SLEEP_DHIKR)
                 time.sleep(1)
             last_sent[f"n{d}"] = True
+
+         
+        if now.weekday() == 4:
+            if t.hour == JUMUAH_TIME.hour and t.minute == JUMUAH_TIME.minute and not sent(f"j{d}"):
+                for g in GROUPS:
+                    send_photo(g, JUMUAH_IMG_URL, caption="🕌 سنن يوم الجمعة")
+                    time.sleep(1)
+                    send_document(g, KAHF_PDF_URL, caption="📖 سورة الكهف")
+                    time.sleep(1)
+                last_sent[f"j{d}"] = True
+        
 
         time.sleep(60)
 
@@ -249,4 +292,3 @@ if __name__ == "__main__":
     asyncio.run_coroutine_threadsafe(hook(), event_loop)
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
- 

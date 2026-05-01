@@ -37,7 +37,7 @@ EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/ph
 # الجمعة
 JUMUAH_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/images.jpeg"
 KAHF_PDF_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/kahf.pdf"
-JUMUAH_TIME = dt_time(1,0 )
+JUMUAH_TIME = dt_time(1,13 )
 
 # 🔥 هامش
 WINDOW = 10
@@ -49,7 +49,7 @@ EVENING_TIME = dt_time(16, 0)
 NIGHT_TIME = dt_time(1,2)
 REMINDER_TIME_1 = dt_time(11, 0)
 REMINDER_TIME_2 = dt_time(17, 0)
-REMINDER_TIME_3 = dt_time(1, 1)
+REMINDER_TIME_3 = dt_time(1, 12)
 
 GENERAL_DHIKR = """ 🌿 **﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾**
 

@@ -57,16 +57,16 @@ REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
 GENERAL_DHIKR = """ 🌿 **﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾**
-  سُبحان الله
-  الحمدلله
-  الله أكبر
-  أستغفر الله
-  لا إله إلا الله
-  لا حول ولا قوة إلا بالله
-  سُبحان الله وبحمده
-  سُبحان الله العظيم
-  اللَّهُمَّ صلِّ وسلِم على نبينا محمد
-  لا إله إلا أنت سُبحانك إني كنت من الظالمين.
+سُبحان الله
+الحمدلله
+الله أكبر
+أستغفر الله
+لا إله إلا الله
+لا حول ولا قوة إلا بالله
+سُبحان الله وبحمده
+سُبحان الله العظيم
+اللَّهُمَّ صلِّ وسلِم على نبينا محمد
+لا إله إلا أنت سُبحانك إني كنت من الظالمين.
 """
 
 SLEEP_DHIKR = """🌙 نام وأنت مغفور الذنب
@@ -83,11 +83,12 @@ START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 📿 17:00 | تذكير بالله  
 📿 21:00 | تذكير بالله   
 🌙 23:00 | أذكار النوم  
-👤 حسابي  :
+👤 حسابي :
 @Mik_emm
 💡 صاحب الفكرة:
 @mohamedelhocine
 🤲 نرجو الدعاء له
+بارك الله فيكم 🌸
 """
 
 HELP_RESPONSE = """📌 الأوامر المتاحة:
@@ -112,8 +113,11 @@ def send_message(chat_id, text):
                 await get_bot().send_message(chat_id, text, message_thread_id=THREAD_ID)
             else:
                 await get_bot().send_message(chat_id, text)
+        except error.RetryAfter as e:
+            time.sleep(int(e.retry_after) + 1)
+            await get_bot().send_message(chat_id, text)
         except Exception as e:
-            logging.error(e)
+            logging.error(f"Error sending message: {e}")
     asyncio.run_coroutine_threadsafe(task(), event_loop)
 
 def send_photo(chat_id, photo_url, caption=None):
@@ -181,8 +185,8 @@ def scheduler():
             last_sent[f"n{d}"] = True
 
         # الجمعة
-        if now.weekday() == 4:
-            if t.hour == JUMUAH_TIME.hour and t.minute == JUMUAH_TIME.minute and not sent(f"j{d}"):
+        if now.weekday() == 4 and not sent(f"j{d}"):
+            if t.hour == JUMUAH_TIME.hour and t.minute == JUMUAH_TIME.minute:
                 for g in GROUPS:
                     send_photo(g, JUMUAH_IMG_URL, caption="🕌 سنن يوم الجمعة")
                     time.sleep(1)
@@ -207,8 +211,34 @@ threading.Thread(target=keep_alive, daemon=True).start()
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    data = request.get_json()
+    if not data: return jsonify(ok=True)
+
+    if "message" in data:
+        msg = data["message"]
+        chat_id = msg["chat"]["id"]
+        chat_type = msg["chat"]["type"]
+        user_id = msg.get("from", {}).get("id")
+        text = msg.get("text", "").strip()
+        command = text.split("@")[0]
+
+        if chat_type == "private" or user_id == ADMIN_ID:
+            if command == "/start":
+                send_message(chat_id, START_RESPONSE)
+            elif command == "/help":
+                send_message(chat_id, HELP_RESPONSE)
+            elif command == "/status":
+                send_message(chat_id, f"✅ البوت يعمل\n⏰ {datetime.now(TIMEZONE)}")
+
     return jsonify(ok=True)
 
 if __name__ == "__main__":
+    async def hook():
+        try:
+            await get_bot().set_webhook(WEBHOOK_URL)
+        except Exception as e:
+            logging.error(f"Webhook Error: {e}")
+
+    asyncio.run_coroutine_threadsafe(hook(), event_loop)
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)

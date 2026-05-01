@@ -23,7 +23,15 @@ if not TELEGRAM_TOKEN:
 ADMIN_ID = 7635779264 
 
 GROUPS = [
-   "-1002576714713"
+    "-1002225164483","-1003784451676","-1003536873125","-1003341681144","-1002147437425","-1003227104213","-1005873502473","-1002176070309",
+    "-1003816989921","-1003180809085","-1003311119289","-1003697993023","-1003052347212","-1003844593524","-1002858641545","-1003793235641",
+    "-1003896099517","-1003587459955","-1002282439285","-1003116442943","-1002931305845","-1003312231265","-1003894583067","-1003843458817",
+    "-1002035944708","-1003271832818","-1003719826542","-1002853793956","-1003658097048","-1003322259283","-1003826569019","-1003599878671",
+    "-1002553441661","-1003341681144","-1003579089415","-1003323851379","-1002900824077","-1002266393691","-1003370258674","-1003044484309",
+    "-1002196247994","-1003153665259","-1003744076345","-1003587459955","-1001978444680","-1002945924752","-1002830014765","-1002277708600",
+    "-1002576714713","-1003780145453","-1003372233969","-1002704601167","-1003191159502","-1003177076554","-1002820782492","-1002489850528",
+    "-1003649220499","-1003031738078","-1003205832373","-1003186786281","-1003189260339","-1001936885623","-1002893497331","-1003781037410",
+    "-1003277943834","-1002015026585","-1001900429351","-1003780145453","-1002535678527","-1002941551082","-1003116951477","-1002348968170","-1002576714713"
 ]
 
 TARGET_GROUP = -1002945924752
@@ -35,24 +43,20 @@ MORNING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/ph
 EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-28_16-54-02.jpg"
 
 # الجمعة
-JUMUAH_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/images.jpeg"
+JUMUAH_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_6026127781499964724_w.jpg"
 KAHF_PDF_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/kahf.pdf"
-JUMUAH_TIME = dt_time(1,13 )
-
-# 🔥 هامش
-WINDOW = 10
+JUMUAH_TIME = dt_time(9, 0)
 
 TIMEZONE = pytz.timezone("Africa/Algiers")
 
 MORNING_TIME = dt_time(8, 30)
 EVENING_TIME = dt_time(16, 0)
-NIGHT_TIME = dt_time(1,2)
+NIGHT_TIME = dt_time(23, 0)
 REMINDER_TIME_1 = dt_time(11, 0)
 REMINDER_TIME_2 = dt_time(17, 0)
-REMINDER_TIME_3 = dt_time(1, 12)
+REMINDER_TIME_3 = dt_time(21, 0)
 
 GENERAL_DHIKR = """ 🌿 **﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾**
-
   سُبحان الله
   الحمدلله
   الله أكبر
@@ -66,26 +70,27 @@ GENERAL_DHIKR = """ 🌿 **﴿ وَاذْكُر ربّكَ إِذَا نَسِي
 """
 
 SLEEP_DHIKR = """🌙 نام وأنت مغفور الذنب
-
 قال رسول الله ﷺ:
 "من قال حين يأوي إلى فراشه:
 'لا إله إلا الله وحده لا شريك له، له الملك وله الحمد، وهو على كل شيء قدير، لا حول ولا قوة إلا بالله، سبحان الله والحمد لله ولا إله إلا الله والله أكبر'
-
 غفر الله ذنوبه أو خطاياه وإن كانت مثل زبد البحر." 🤎🌗"""
 
 START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
-
 يُرسل الأذكار والتذكيرات يومياً بتوقيت الجزائر:
-
 🌅 08:30 | أذكار الصباح  
 📿 11:00 | تذكير بالله  
 🌇 16:00 | أذكار المساء  
 📿 17:00 | تذكير بالله  
 📿 21:00 | تذكير بالله   
 🌙 23:00 | أذكار النوم  
+👤 حسابي  :
+@Mik_emm
+💡 صاحب الفكرة:
+@mohamedelhocine
+🤲 نرجو الدعاء له
 """
 
-HELP_RESPONSE = """📌 الأوامر:
+HELP_RESPONSE = """📌 الأوامر المتاحة:
 /start
 /help
 /status
@@ -139,50 +144,50 @@ def scheduler():
         t, d = now.time(), now.date()
         def sent(k): return k in last_sent
 
-        if t.hour == MORNING_TIME.hour and MORNING_TIME.minute <= t.minute <= MORNING_TIME.minute + WINDOW and not sent(f"m{d}"):
+        if t.hour == MORNING_TIME.hour and t.minute == MORNING_TIME.minute and not sent(f"m{d}"):
             for g in GROUPS:
                 send_photo(g, MORNING_IMG_URL, caption="🌅 أذكار الصباح")
-                time.sleep(0.3)
+                time.sleep(1)
             last_sent[f"m{d}"] = True
 
-        if t.hour == REMINDER_TIME_1.hour and REMINDER_TIME_1.minute <= t.minute <= REMINDER_TIME_1.minute + WINDOW and not sent(f"r1{d}"):
+        if t.hour == REMINDER_TIME_1.hour and t.minute == REMINDER_TIME_1.minute and not sent(f"r1{d}"):
             for g in GROUPS:
                 send_message(g, GENERAL_DHIKR)
-                time.sleep(0.3)
+                time.sleep(1)
             last_sent[f"r1{d}"] = True
 
-        if t.hour == EVENING_TIME.hour and EVENING_TIME.minute <= t.minute <= EVENING_TIME.minute + WINDOW and not sent(f"e{d}"):
+        if t.hour == EVENING_TIME.hour and t.minute == EVENING_TIME.minute and not sent(f"e{d}"):
             for g in GROUPS:
                 send_photo(g, EVENING_IMG_URL, caption="🌇 أذكار المساء")
-                time.sleep(0.3)
+                time.sleep(1)
             last_sent[f"e{d}"] = True
 
-        if t.hour == REMINDER_TIME_2.hour and REMINDER_TIME_2.minute <= t.minute <= REMINDER_TIME_2.minute + WINDOW and not sent(f"r2{d}"):
+        if t.hour == REMINDER_TIME_2.hour and t.minute == REMINDER_TIME_2.minute and not sent(f"r2{d}"):
             for g in GROUPS:
                 send_message(g, GENERAL_DHIKR)
-                time.sleep(0.3)
+                time.sleep(1)
             last_sent[f"r2{d}"] = True
 
-        if t.hour == REMINDER_TIME_3.hour and REMINDER_TIME_3.minute <= t.minute <= REMINDER_TIME_3.minute + WINDOW and not sent(f"r3{d}"):
+        if t.hour == REMINDER_TIME_3.hour and t.minute == REMINDER_TIME_3.minute and not sent(f"r3{d}"):
             for g in GROUPS:
                 send_message(g, GENERAL_DHIKR)
-                time.sleep(0.3)
+                time.sleep(1)
             last_sent[f"r3{d}"] = True
 
-        if t.hour == NIGHT_TIME.hour and NIGHT_TIME.minute <= t.minute <= NIGHT_TIME.minute + WINDOW and not sent(f"n{d}"):
+        if t.hour == NIGHT_TIME.hour and t.minute == NIGHT_TIME.minute and not sent(f"n{d}"):
             for g in GROUPS:
                 send_message(g, SLEEP_DHIKR)
-                time.sleep(0.3)
+                time.sleep(1)
             last_sent[f"n{d}"] = True
 
         # الجمعة
-        if now.weekday() == 4 and not sent(f"j{d}"):
-            if t.hour == JUMUAH_TIME.hour and JUMUAH_TIME.minute <= t.minute <= JUMUAH_TIME.minute + WINDOW:
+        if now.weekday() == 4:
+            if t.hour == JUMUAH_TIME.hour and t.minute == JUMUAH_TIME.minute and not sent(f"j{d}"):
                 for g in GROUPS:
                     send_photo(g, JUMUAH_IMG_URL, caption="🕌 سنن يوم الجمعة")
-                    time.sleep(0.3)
+                    time.sleep(1)
                     send_document(g, KAHF_PDF_URL, caption="📖 سورة الكهف")
-                    time.sleep(0.3)
+                    time.sleep(1)
                 last_sent[f"j{d}"] = True
 
         time.sleep(60)
@@ -202,26 +207,8 @@ threading.Thread(target=keep_alive, daemon=True).start()
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.get_json()
-    if not data: return jsonify(ok=True)
-
-    if "message" in data:
-        msg = data["message"]
-        chat_id = msg["chat"]["id"]
-        text = msg.get("text","")
-
-        if text == "/start":
-            send_message(chat_id, START_RESPONSE)
-        elif text == "/help":
-            send_message(chat_id, HELP_RESPONSE)
-
     return jsonify(ok=True)
 
 if __name__ == "__main__":
-    async def hook():
-        await get_bot().set_webhook(WEBHOOK_URL)
-
-    asyncio.run_coroutine_threadsafe(hook(), event_loop)
-
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)

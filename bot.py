@@ -52,23 +52,11 @@ TIMEZONE = pytz.timezone("Africa/Algiers")
 MORNING_TIME = dt_time(8, 30)
 EVENING_TIME = dt_time(16, 0)
 NIGHT_TIME = dt_time(23, 0)
-REMINDER_TIME_1 = dt_time(11, 0)
+REMINDER_TIME_1 = dt_time(8, 0)
 REMINDER_TIME_2 = dt_time(17, 0)
 REMINDER_TIME_3 = dt_time(21, 0)
 
-GENERAL_DHIKR = """ 🌿 **﴿ وَاذْكُر ربّكَ إِذَا نَسِيتَ ﴾**
-سُبحان الله
-الحمدلله
-الله أكبر
-أستغفر الله
-لا إله إلا الله
-لا حول ولا قوة إلا بالله
-سُبحان الله وبحمده
-سُبحان الله العظيم
-اللَّهُمَّ صلِّ وسلِم على نبينا محمد
-لا إله إلا أنت سُبحانك إني كنت من الظالمين.
-"""
-
+GENERAL_DHIKR = """ عيد أضحى مبارك، تقبل الله منا ومنكم، وكل عام وأنتم بخير """
 SLEEP_DHIKR = """🌙 نام وأنت مغفور الذنب
 قال رسول الله ﷺ:
 "من قال حين يأوي إلى فراشه:

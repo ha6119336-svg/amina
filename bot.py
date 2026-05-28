@@ -45,7 +45,6 @@ GROUPS = [
     "-1002576714713"  
 ]
 
-
 TARGET_GROUP = -1002945924752
 THREAD_ID = 8017
 
@@ -54,7 +53,6 @@ WEBHOOK_URL = "https://amina-3ryn.onrender.com/webhook"
 MORNING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-22_10-05-15.jpg"
 EVENING_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_2025-12-28_16-54-02.jpg"
 
-# الجمعة
 JUMUAH_IMG_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/photo_6026127781499964724_w.jpg"
 KAHF_PDF_URL = "https://raw.githubusercontent.com/ha6119336-svg/amina/main/kahf.pdf"
 JUMUAH_TIME = dt_time(9, 0)
@@ -195,7 +193,6 @@ def scheduler():
                 time.sleep(1)
             last_sent[f"n{d}"] = True
 
-        # الجمعة
         if now.weekday() == 4 and not sent(f"j{d}"):
             if t.hour == JUMUAH_TIME.hour and t.minute == JUMUAH_TIME.minute:
                 for g in GROUPS:
@@ -224,6 +221,21 @@ threading.Thread(target=keep_alive, daemon=True).start()
 def webhook():
     data = request.get_json()
     if not data: return jsonify(ok=True)
+
+    # ✅ الجديد: إشعار دخول قروب
+    if "my_chat_member" in data:
+        chat = data["my_chat_member"]["chat"]
+        new_status = data["my_chat_member"]["new_chat_member"]["status"]
+
+        if new_status in ["member", "administrator"]:
+            chat_id = chat["id"]
+            chat_title = chat.get("title", "بدون اسم")
+
+            send_message(ADMIN_ID, f"""🔔 **تم دخول مجموعة جديدة!**
+
+🏷 الاسم: {chat_title}
+
+🆔 الآيدي: `{chat_id}`""")
 
     if "message" in data:
         msg = data["message"]

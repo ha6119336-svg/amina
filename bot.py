@@ -95,7 +95,7 @@ START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 👤 حسابي :
 @Mik_emm
 💡 صاحب الفكرة:
-@mohamedelhocine
+@abuhud_alathari
 🤲 نرجو الدعاء له
 بارك الله فيكم 🌸
 """

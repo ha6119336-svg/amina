@@ -20,7 +20,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
     print("⚠️ Error: TELEGRAM_TOKEN is missing!")
 
-ADMIN_ID = 7635779264 
+ADMIN_ID = 9241274241 
 
 GROUPS = [
     "-1002576714713",
@@ -107,7 +107,7 @@ START_RESPONSE = """🤖 بوت أذكار الصباح والمساء
 📿 21:00 | تذكير بالله   
 🌙 23:00 | أذكار النوم  
 👤    حسابي :
-@Mik_emm
+××××××××
 💡 صاحب الفكرة:
 @abuhud_alathari
 🤲 نرجو الدعاء له
